@@ -5,6 +5,7 @@ on:
   pull_request:
     branches: [main]
     types: [closed]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,14 +15,25 @@ concurrency:
 jobs:
   release:
     # A normal push to main can prepare a release PR, but it can never publish.
-    # Publishing requires merging the branch managed by changesets/action.
+    # Publishing requires a same-repository versioned release branch. A
+    # manual workflow dispatch is reserved for idempotent release recovery.
     if: >-
       ${{
-        github.event.pull_request.merged == true &&
-        github.event.pull_request.head.ref == 'changeset-release/main'
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/main'
+        ) ||
+        (
+          github.event.pull_request.merged == true &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          (
+            github.event.pull_request.head.ref == 'changeset-release/main' ||
+            startsWith(github.event.pull_request.head.ref, 'release/v')
+          )
+        )
       }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -32,20 +44,31 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: santi020k/quality/actions/setup-pnpm@eec1701b98bcc0b76d36af288ee78a0369cd84cc # v1
         with:
           node-version: 22.x
           registry-url: "https://registry.npmjs.org"
-          cache: "pnpm"
+      - name: Verify release source and version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == 'pull_request' ]]; then
+            RELEASE_PREVIOUS_VERSION=$(git show "${RELEASE_BASE_SHA}:packages/basic/package.json" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+            export RELEASE_PREVIOUS_VERSION
+          fi
+          node scripts/check-release-source.mjs
+        env:
+          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Validate merged release and dependency security
+        run: |
+          pnpm run release:check
+          pnpm audit --audit-level=high
+
+      - name: Install OIDC-capable npm
+        run: npm install --global npm@11.20.0
 
       - name: Build and validate versioned packages
         run: |
@@ -54,28 +77,29 @@ jobs:
           pnpm run check:publish-dry-run
           pnpm run check:attw
         env:
-          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RELEASE_BUILD_ALL_IF_UNVERSIONED: "true"
+          RELEASE_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
 
       - name: Publish versioned packages
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2.1.2
         with:
-          publish: pnpm run release:publish
-          createGithubReleases: true
+          publish-script: pnpm run release:publish
+          create-github-releases: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
           HUSKY: 0
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
 
-      # Changesets creates one tag per published package. Only a Basic release
-      # updates the umbrella and rolling Action tags; independent releases for
-      # other packages must never move those tags back to an older Basic commit.
-      - name: Reconcile umbrella version tag
+      # Changesets creates one tag and GitHub Release per published package. The
+      # Basic package owns the umbrella Release and rolling Action tag. Manage
+      # both through GitHub's API so the workflow token never needs to push Git
+      # refs that contain workflow-file changes.
+      - name: Reconcile umbrella GitHub release
         if: steps.changesets.outcome == 'success'
         shell: bash
         run: |
-          set -eu
+          set -euo pipefail
 
           VERSION=$(node -p "require('./packages/basic/package.json').version")
           TAG="v${VERSION}"
@@ -91,12 +115,19 @@ jobs:
             exit 0
           fi
 
-          RELEASE_COMMIT=$(git rev-list -n 1 "${PACKAGE_TAG}")
-          CURRENT_RELEASE_COMMIT=$(git rev-parse HEAD)
+          if [[ "${GITHUB_EVENT_NAME}" == 'pull_request' ]]; then
+            PREVIOUS_VERSION=$(git show "${RELEASE_BASE_SHA}:packages/basic/package.json" | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+            if [[ "${VERSION}" == "${PREVIOUS_VERSION}" ]]; then
+              echo "Basic was not versioned by this release; preserving its umbrella and rolling tags."
+              exit 0
+            fi
+          fi
 
-          if [[ "${RELEASE_COMMIT}" != "${CURRENT_RELEASE_COMMIT}" ]]; then
-            echo "Basic package tag ${PACKAGE_TAG} does not point to the current release commit; umbrella tags remain unchanged." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+          RELEASE_COMMIT=$(git rev-list -n 1 "${PACKAGE_TAG}")
+          EXPECTED_COMMIT=$(git rev-parse HEAD)
+          if [[ "${RELEASE_COMMIT}" != "${EXPECTED_COMMIT}" ]]; then
+            echo "::error::Package tag ${PACKAGE_TAG} points to ${RELEASE_COMMIT}, expected merged release ${EXPECTED_COMMIT}."
+            exit 1
           fi
 
           if git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null; then
@@ -108,27 +139,71 @@ jobs:
 
             echo "Tag ${TAG} already points to the release commit; nothing to do."
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "${TAG}" -m "Release ${TAG}" "${RELEASE_COMMIT}"
-            git push origin "refs/tags/${TAG}"
-            echo "Created umbrella release tag ${TAG}." >> "$GITHUB_STEP_SUMMARY"
+            echo "GitHub Release creation will create tag ${TAG} at ${RELEASE_COMMIT}."
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -fa "${MAJOR_TAG}" -m "Release ${MAJOR_TAG}" "${RELEASE_COMMIT}"
-          git push --force origin "refs/tags/${MAJOR_TAG}"
-          echo "Updated rolling action tag ${MAJOR_TAG}." >> "$GITHUB_STEP_SUMMARY"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "GitHub Release ${TAG} already exists; nothing to do."
+          else
+            RELEASE_BODY=$(gh release view "${PACKAGE_TAG}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json body \
+              --jq '.body')
+
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" \
+              -f tag_name="${TAG}" \
+              -f target_commitish="${RELEASE_COMMIT}" \
+              -f name="${TAG}" \
+              -f body="${RELEASE_BODY}" >/dev/null
+            echo "Created umbrella GitHub Release ${TAG}." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if git rev-parse --verify --quiet "refs/tags/${MAJOR_TAG}" >/dev/null; then
+            MAJOR_TAG_COMMIT=$(git rev-list -n 1 "${MAJOR_TAG}")
+
+            if [[ "${MAJOR_TAG_COMMIT}" != "${RELEASE_COMMIT}" ]]; then
+              if ! git merge-base --is-ancestor "${MAJOR_TAG_COMMIT}" "${RELEASE_COMMIT}"; then
+                echo "::error::Refusing to move ${MAJOR_TAG} backwards from ${MAJOR_TAG_COMMIT} to ${RELEASE_COMMIT}."
+                exit 1
+              fi
+
+              gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${MAJOR_TAG}" \
+                -f sha="${RELEASE_COMMIT}" \
+                -F force=true >/dev/null
+              echo "Updated rolling action tag ${MAJOR_TAG}." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${MAJOR_TAG}" \
+              -f sha="${RELEASE_COMMIT}" >/dev/null
+            echo "Created rolling action tag ${MAJOR_TAG}." >> "$GITHUB_STEP_SUMMARY"
+          fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HUSKY: 0
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+      # npm OIDC intentionally authenticates publish commands only. Metadata
+      # updates still need a valid granular token, so detect an expired token
+      # without allowing it to invalidate an otherwise successful release.
+      - name: Check npm metadata token
+        id: npm-metadata-token
+        if: steps.changesets.outputs.published == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          if npm whoami >/dev/null 2>&1; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::NPM_TOKEN cannot authenticate; skipping compatibility-package deprecation updates."
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # These packages remain installable throughout v3 so existing consumers
       # receive a migration message instead of a broken dependency. Do not
       # deprecate v2, where Lite and Integrations are still supported entry points.
       - name: Mark v3 compatibility packages as deprecated
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.npm-metadata-token.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -171,3 +246,9 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published release and consumer behavior
+        run: pnpm run check:published-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BASE_SHA: ${{ github.event.pull_request.base.sha }}

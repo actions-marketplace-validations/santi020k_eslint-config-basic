@@ -1,6 +1,6 @@
 {
   "name": "@santi020k/eslint-config-formats",
-  "version": "3.1.1",
+  "version": "3.1.5",
   "publishConfig": {
     "access": "public",
     "provenance": true
@@ -25,7 +25,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node ../../scripts/bundle-adapter-dependencies.mjs formats",
     "check:exports": "publint",
     "clean": "rm -rf dist",
     "dev": "tsup --watch",
@@ -36,7 +36,6 @@
   "dependencies": {
     "@eslint/css": "catalog:",
     "@eslint/markdown": "catalog:",
-    "@graphql-eslint/eslint-plugin": "catalog:",
     "@html-eslint/eslint-plugin": "catalog:",
     "@html-eslint/parser": "catalog:",
     "@santi020k/eslint-config-core": "workspace:^",
@@ -49,6 +48,7 @@
     "typescript-eslint": "catalog:"
   },
   "devDependencies": {
+    "@graphql-eslint/eslint-plugin": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "graphql": "catalog:",
@@ -78,6 +78,12 @@
     "directory": "packages/formats"
   },
   "homepage": "https://eslint.santi020k.com/tooling/formats",
-  "author": "santi020k",
+  "bugs": {
+    "url": "https://github.com/santi020k/eslint-config-basic/issues"
+  },
+  "author": {
+    "name": "santi020k",
+    "url": "https://santi020k.com"
+  },
   "license": "MIT"
 }

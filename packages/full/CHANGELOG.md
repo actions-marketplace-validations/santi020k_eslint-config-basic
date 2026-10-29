@@ -1,5 +1,157 @@
 # @santi020k/eslint-config-full
 
+## 3.2.7
+
+### Patch Changes
+
+- Keep the Vitest ESLint plugin on the latest release compatible with the documented TypeScript 5 support range.
+
+  Refresh compatible security dependencies, including the Storybook ESLint plugin, and retain the full release gate while making affected checks fail safe when Git history or shared inputs require complete validation.
+- Updated dependencies [`c90b2ec`]:
+  - @santi020k/eslint-config-basic@3.6.2
+  - @santi020k/eslint-config-libraries@3.1.6
+  - @santi020k/eslint-config-testing@3.1.6
+
+## 3.2.6
+
+### Patch Changes
+
+- Refresh package READMEs with consistent light and dark artwork, clear installation and configuration examples, quick navigation, compatibility guidance, and direct documentation, source, changelog, and support links. Correct outdated contributor and private-workspace instructions. No configuration APIs, lint rules, or runtime requirements change.
+- Updated dependencies []:
+  - @santi020k/eslint-config-angular@3.1.4
+  - @santi020k/eslint-config-astro@3.1.6
+  - @santi020k/eslint-config-basic@3.6.1
+  - @santi020k/eslint-config-expo@3.1.4
+  - @santi020k/eslint-config-extensions@3.1.5
+  - @santi020k/eslint-config-formats@3.1.5
+  - @santi020k/eslint-config-hono@3.1.4
+  - @santi020k/eslint-config-libraries@3.1.5
+  - @santi020k/eslint-config-lit@3.1.4
+  - @santi020k/eslint-config-nest@3.1.4
+  - @santi020k/eslint-config-next@3.1.4
+  - @santi020k/eslint-config-nuxt@3.1.4
+  - @santi020k/eslint-config-preact@3.1.4
+  - @santi020k/eslint-config-qwik@3.1.4
+  - @santi020k/eslint-config-react@3.1.4
+  - @santi020k/eslint-config-react-router@3.1.4
+  - @santi020k/eslint-config-slidev@3.1.4
+  - @santi020k/eslint-config-solid@3.1.4
+  - @santi020k/eslint-config-svelte@3.1.4
+  - @santi020k/eslint-config-tanstack-start@3.1.4
+  - @santi020k/eslint-config-testing@3.1.5
+  - @santi020k/eslint-config-tools@3.1.5
+  - @santi020k/eslint-config-vite@3.1.4
+  - @santi020k/eslint-config-vue@3.1.4
+
+## 3.2.5
+
+### Patch Changes
+
+- Preserve Node 22.19 support with compatible stable dependencies and deliver the maintained braces recursion guard in affected adapter artifacts. ESLint, GraphQL, and TypeScript remain consumer peers.
+
+- Center the documentation mobile menu and close icons, align utility controls, and clarify the open state with a subtle accented button surface.
+
+- Animate documentation mobile menu opening and closing with subtle icon and drawer transitions, including a brief blur and immediate reduced-motion states.
+
+- Fix narrow mobile header clipping, improve sidebar readability, and remove redundant spacing around the mobile table of contents.
+
+- Resolve generated Markdown reference links to published routes across current docs and frozen archives, preserving fragments and deployment base paths.
+
+- Clarify the v3.6.0 release candidate, upgrade verification, current troubleshooting, and shared editor and CI lint setup.
+
+- Refresh the supported dependency ecosystem and security overrides, preserve Zod integration defaults across the plugin upgrade, guarantee TypeScript parsing in Astro frontmatter, and improve the release gates and npm documentation.
+
+    The Basic README gains light/dark artwork, package selection guidance, and published asset/support links. The documentation site uses npm Lumen Astro 4 with accessible motion, contextual GitHub issue reporting, resilient browser feedback, responsive report output, and full-glyph WOFF2 fonts that substantially reduce transfer size.
+
+    Release preparation now accepts validated `release/v<stable-semver>` branches alongside Changesets-generated branches; both undergo source/version checks, complete preflight, and a dependency audit before publication.
+  - Updated dependencies []:
+    - @santi020k/eslint-config-angular@3.1.3
+    - @santi020k/eslint-config-astro@3.1.5
+    - @santi020k/eslint-config-basic@3.6.0
+    - @santi020k/eslint-config-expo@3.1.3
+    - @santi020k/eslint-config-extensions@3.1.4
+    - @santi020k/eslint-config-formats@3.1.4
+    - @santi020k/eslint-config-hono@3.1.3
+    - @santi020k/eslint-config-libraries@3.1.4
+    - @santi020k/eslint-config-lit@3.1.3
+    - @santi020k/eslint-config-nest@3.1.3
+    - @santi020k/eslint-config-next@3.1.3
+    - @santi020k/eslint-config-nuxt@3.1.3
+    - @santi020k/eslint-config-preact@3.1.3
+    - @santi020k/eslint-config-qwik@3.1.3
+    - @santi020k/eslint-config-react@3.1.3
+    - @santi020k/eslint-config-react-router@3.1.3
+    - @santi020k/eslint-config-slidev@3.1.3
+    - @santi020k/eslint-config-solid@3.1.3
+    - @santi020k/eslint-config-svelte@3.1.3
+    - @santi020k/eslint-config-tanstack-start@3.1.3
+    - @santi020k/eslint-config-testing@3.1.4
+    - @santi020k/eslint-config-tools@3.1.4
+    - @santi020k/eslint-config-vite@3.1.3
+    - @santi020k/eslint-config-vue@3.1.3
+- Updated dependencies [`ddaa3c8`, `180740f`, `f3fbaca`, `af59aa3`, `d6603af`, `d42a9eb`]:
+  - @santi020k/eslint-config-basic@3.6.0
+  - @santi020k/eslint-config-angular@3.1.3
+  - @santi020k/eslint-config-astro@3.1.5
+  - @santi020k/eslint-config-libraries@3.1.4
+  - @santi020k/eslint-config-lit@3.1.3
+  - @santi020k/eslint-config-nest@3.1.3
+  - @santi020k/eslint-config-next@3.1.3
+  - @santi020k/eslint-config-nuxt@3.1.3
+  - @santi020k/eslint-config-preact@3.1.3
+  - @santi020k/eslint-config-qwik@3.1.3
+  - @santi020k/eslint-config-react@3.1.3
+  - @santi020k/eslint-config-react-router@3.1.3
+  - @santi020k/eslint-config-slidev@3.1.3
+  - @santi020k/eslint-config-solid@3.1.3
+  - @santi020k/eslint-config-svelte@3.1.3
+  - @santi020k/eslint-config-tanstack-start@3.1.3
+  - @santi020k/eslint-config-testing@3.1.4
+  - @santi020k/eslint-config-tools@3.1.4
+  - @santi020k/eslint-config-vite@3.1.3
+  - @santi020k/eslint-config-vue@3.1.3
+  - @santi020k/eslint-config-expo@3.1.3
+  - @santi020k/eslint-config-extensions@3.1.4
+  - @santi020k/eslint-config-formats@3.1.4
+  - @santi020k/eslint-config-hono@3.1.3
+
+## 3.2.4
+
+### Patch Changes
+
+- Synchronize the batteries-included aggregate with the package documentation and metadata updates in this release.
+
+## 3.2.3
+
+### Patch Changes
+
+- [#126](https://github.com/santi020k/eslint-config-basic/pull/126) [`2bf02c3`](https://github.com/santi020k/eslint-config-basic/commit/2bf02c349c8b99671ac069a26ec7065a8233d4f2) Thanks [@santi020k](https://github.com/santi020k)! - Upgrade the supported dependency ecosystem, adopt Lumen Astro 2, and resolve all known audit findings with patched transitive versions.
+- Updated dependencies [[`2bf02c3`](https://github.com/santi020k/eslint-config-basic/commit/2bf02c349c8b99671ac069a26ec7065a8233d4f2)]:
+  - @santi020k/eslint-config-angular@3.1.1
+  - @santi020k/eslint-config-astro@3.1.3
+  - @santi020k/eslint-config-basic@3.5.2
+  - @santi020k/eslint-config-expo@3.1.1
+  - @santi020k/eslint-config-extensions@3.1.2
+  - @santi020k/eslint-config-formats@3.1.2
+  - @santi020k/eslint-config-hono@3.1.1
+  - @santi020k/eslint-config-libraries@3.1.2
+  - @santi020k/eslint-config-lit@3.1.1
+  - @santi020k/eslint-config-nest@3.1.1
+  - @santi020k/eslint-config-next@3.1.1
+  - @santi020k/eslint-config-nuxt@3.1.1
+  - @santi020k/eslint-config-preact@3.1.1
+  - @santi020k/eslint-config-qwik@3.1.1
+  - @santi020k/eslint-config-react@3.1.1
+  - @santi020k/eslint-config-react-router@3.1.1
+  - @santi020k/eslint-config-slidev@3.1.1
+  - @santi020k/eslint-config-solid@3.1.1
+  - @santi020k/eslint-config-svelte@3.1.1
+  - @santi020k/eslint-config-tanstack-start@3.1.1
+  - @santi020k/eslint-config-testing@3.1.2
+  - @santi020k/eslint-config-tools@3.1.2
+  - @santi020k/eslint-config-vite@3.1.1
+  - @santi020k/eslint-config-vue@3.1.1
+
 ## 3.2.2
 
 ### Patch Changes

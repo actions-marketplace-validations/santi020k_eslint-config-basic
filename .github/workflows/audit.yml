@@ -9,6 +9,8 @@ on:
       - 'apps/*/package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'vendor/braces/**'
+      - 'scripts/check-braces-guard.mjs'
       - '.github/workflows/audit.yml'
   schedule:
     - cron: '0 9 * * 1' # Every Monday at 9am UTC
@@ -28,13 +30,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: santi020k/quality/actions/setup-pnpm@eec1701b98bcc0b76d36af288ee78a0369cd84cc # v1
         with:
           node-version: 22.x
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
       - name: Run pnpm audit
-        run: pnpm audit --audit-level=high --ignore-registry-errors
+        run: pnpm audit --audit-level=high
+      - name: Verify maintained braces remediation
+        run: node scripts/check-braces-guard.mjs

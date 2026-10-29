@@ -13,6 +13,8 @@ on:
       - 'apps/docs/**'
       - 'packages/*/README.md'
       - '.github/workflows/docs.yml'
+      - 'scripts/check-live-docs.mjs'
+      - 'scripts/resolve-docs-commit.*'
   # Run the complete deployment gates before docs changes can merge, without deploying the PR.
   pull_request:
     branches: [main]
@@ -20,6 +22,8 @@ on:
       - 'apps/docs/**'
       - 'packages/*/README.md'
       - '.github/workflows/docs.yml'
+      - 'scripts/check-live-docs.mjs'
+      - 'scripts/resolve-docs-commit.*'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -29,6 +33,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 # Cancel superseded PR checks, but never interrupt a release or production deploy.
 concurrency:
@@ -37,8 +42,10 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
     # Skip when triggered by a failed/cancelled Release run.
     if: |
       github.event_name == 'push' ||
@@ -52,18 +59,39 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Resolve documentation source
+        id: source
+        uses: actions/github-script@v7
         with:
-          # workflow_run events expose the triggering commit on a different context key.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          script: |
+            const { resolveDocsCommit } = await import(`${process.env.GITHUB_WORKSPACE}/scripts/resolve-docs-commit.mjs`)
+            const workflowRun = context.payload.workflow_run
+            const pullRequests = workflowRun?.event === 'pull_request' ?
+              await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+                ...context.repo,
+                commit_sha: workflowRun.head_sha,
+              }) : []
+            core.setOutput('commit', resolveDocsCommit({
+              eventName: context.eventName,
+              commit: context.sha,
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              workflowRun,
+              pullRequests,
+            }))
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v5
+      - uses: actions/checkout@v6
+        with:
+          # Closed-PR Release runs report the PR head, not its squash-merged commit.
+          ref: ${{ steps.source.outputs.commit }}
+          # Starlight's last-updated dates require the source file's history.
+          fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: santi020k/quality/actions/setup-pnpm@eec1701b98bcc0b76d36af288ee78a0369cd84cc # v1
         with:
           node-version: 22
-          cache: 'pnpm'
+          install: false
 
       - name: Turborepo Cache
         uses: actions/cache@v5
@@ -90,19 +118,34 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-all-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-chromium-
+            ${{ runner.os }}-${{ runner.arch }}-playwright-all-
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
         working-directory: apps/docs
 
       - name: Run A11y and SEO Tests
         run: pnpm run docs:test:a11y
 
+      - name: Upload failed browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-browser-diagnostics
+          path: |
+            apps/docs/test-results
+            apps/docs/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run Lighthouse budgets
         run: pnpm --filter @santi020k/eslint-config-docs run lighthouse
+
+      - name: Stamp deployment commit
+        run: |
+          node --input-type=module -e "import { writeFileSync } from 'node:fs'; import { execFileSync } from 'node:child_process'; writeFileSync('apps/docs/dist/release-build.json', JSON.stringify({ commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() }))"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
@@ -120,9 +163,11 @@ jobs:
     steps:
       - name: Open issue on build failure
         uses: actions/github-script@v7
+        env:
+          DOCS_SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
         with:
           script: |
-            const sha = context.payload.workflow_run?.head_sha ?? context.sha
+            const sha = process.env.DOCS_SOURCE_COMMIT || context.payload.workflow_run?.head_sha || context.sha
             const title = 'Docs build failed — site may be out of sync with latest release'
             const body = [
               `The docs **build** step failed on commit \`${sha}\`.`,
@@ -177,15 +222,31 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v5
 
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+
+      - name: Verify live documentation
+        run: node scripts/check-live-docs.mjs
+        env:
+          DOCS_SMOKE_URL: ${{ steps.deployment.outputs.page_url }}
+          DOCS_EXPECTED_COMMIT: ${{ needs.build.outputs.commit }}
+
       - name: Open issue on deploy failure
         if: failure()
         uses: actions/github-script@v7
+        env:
+          DOCS_SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
         with:
           script: |
-            const sha = context.payload.workflow_run?.head_sha ?? context.sha
+            const sha = process.env.DOCS_SOURCE_COMMIT || context.payload.workflow_run?.head_sha || context.sha
             const title = 'Docs deploy to GitHub Pages failed — site may be out of sync with latest release'
             const body = [
-              `The docs **deploy** step failed on commit \`${sha}\` (the artifact was built successfully but Pages rejected the deploy).`,
+              `Documentation deployment or live verification failed for commit \`${sha}\`. Check the linked workflow for the failing step.`,
               '',
               `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',

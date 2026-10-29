@@ -73,7 +73,7 @@ Disabling this avoids parser crashes in Astro packages without TSConfig files.
 
 > **createAstroConfig**(`options?`): `ConfigArray`
 
-Defined in: [packages/astro/src/index.ts:12](https://github.com/santi020k/eslint-config-basic/blob/main/packages/astro/src/index.ts#L12)
+Defined in: [packages/astro/src/index.ts:13](https://github.com/santi020k/eslint-config-basic/blob/main/packages/astro/src/index.ts#L13)
 
 Creates Astro ESLint configuration based on enabled frameworks
 

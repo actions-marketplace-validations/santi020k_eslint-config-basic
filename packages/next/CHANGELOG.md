@@ -1,5 +1,47 @@
 # @santi020k/eslint-config-next
 
+## 3.1.4
+
+### Patch Changes
+
+- Refresh package READMEs with consistent light and dark artwork, clear installation and configuration examples, quick navigation, compatibility guidance, and direct documentation, source, changelog, and support links. Correct outdated contributor and private-workspace instructions. No configuration APIs, lint rules, or runtime requirements change.
+- Updated dependencies []:
+  - @santi020k/eslint-config-core@3.2.1
+
+## 3.1.3
+
+### Patch Changes
+
+- Preserve Node 22.19 support with compatible stable dependencies and deliver the maintained braces recursion guard in affected adapter artifacts. ESLint, GraphQL, and TypeScript remain consumer peers.
+
+- Refresh the supported dependency ecosystem and security overrides, preserve Zod integration defaults across the plugin upgrade, guarantee TypeScript parsing in Astro frontmatter, and improve the release gates and npm documentation.
+
+    The Basic README gains light/dark artwork, package selection guidance, and published asset/support links. The documentation site uses npm Lumen Astro 4 with accessible motion, contextual GitHub issue reporting, resilient browser feedback, responsive report output, and full-glyph WOFF2 fonts that substantially reduce transfer size.
+
+    Release preparation now accepts validated `release/v<stable-semver>` branches alongside Changesets-generated branches; both undergo source/version checks, complete preflight, and a dependency audit before publication.
+  - Updated dependencies []:
+    - @santi020k/eslint-config-core@3.1.4
+- Updated dependencies [`ddaa3c8`]:
+  - @santi020k/eslint-config-core@3.2.0
+
+## 3.1.2
+
+### Patch Changes
+
+- [#134](https://github.com/santi020k/eslint-config-basic/pull/134) [`07cb188`](https://github.com/santi020k/eslint-config-basic/commit/07cb188c727606bf00b67928ac20e95c2201ddc6) Thanks [@santi020k](https://github.com/santi020k)! - Replace the minimal npm package READMEs with practical installation,
+  configuration, compatibility, and support guidance. The Basic package now
+  publishes the comprehensive root README instead of a short placeholder.
+- Updated dependencies [[`07cb188`](https://github.com/santi020k/eslint-config-basic/commit/07cb188c727606bf00b67928ac20e95c2201ddc6)]:
+  - @santi020k/eslint-config-core@3.1.3
+
+## 3.1.1
+
+### Patch Changes
+
+- [#126](https://github.com/santi020k/eslint-config-basic/pull/126) [`2bf02c3`](https://github.com/santi020k/eslint-config-basic/commit/2bf02c349c8b99671ac069a26ec7065a8233d4f2) Thanks [@santi020k](https://github.com/santi020k)! - Upgrade the supported dependency ecosystem, adopt Lumen Astro 2, and resolve all known audit findings with patched transitive versions.
+- Updated dependencies [[`2bf02c3`](https://github.com/santi020k/eslint-config-basic/commit/2bf02c349c8b99671ac069a26ec7065a8233d4f2)]:
+  - @santi020k/eslint-config-core@3.1.2
+
 ## 3.1.0
 
 ### Patch Changes
